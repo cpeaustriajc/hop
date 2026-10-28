@@ -2,11 +2,11 @@ import AppKit
 import Foundation
 
 enum Launcher {
-    // Do not use `open`: LaunchServices focuses the running instance instead of starting an isolated one.
+    // Without createsNewApplicationInstance, LaunchServices focuses the running Claude; spawning with Process bills Claude's energy to Hop.
     /// Brings the Desktop already running on `dataDir` forward, or starts one and brings its window forward. Returns its PID.
     @MainActor
     static func launchDesktop(dataDir: URL) async throws(HopError) -> Int32 {
-        let (pid, spawned) = try start(dataDir: dataDir)
+        let (pid, spawned) = try await start(dataDir: dataDir)
         _ = try await focus(pid: pid, spawned: spawned)
         return pid
     }
@@ -14,7 +14,7 @@ enum Launcher {
     /// CLI form: a focus failure is returned as `focusError` and does not fail the launch. Only a failed start throws.
     @MainActor
     static func launchDesktopForCLI(dataDir: URL) async throws(HopError) -> (pid: Int32, isActive: Bool?, focusError: HopError?) {
-        let (pid, spawned) = try start(dataDir: dataDir)
+        let (pid, spawned) = try await start(dataDir: dataDir)
         do {
             let isActive = try await focus(pid: pid, spawned: spawned)
             return (pid, isActive, nil)
@@ -23,21 +23,20 @@ enum Launcher {
         }
     }
 
-    private static func start(dataDir: URL) throws(HopError) -> (pid: Int32, spawned: Bool) {
+    @MainActor
+    private static func start(dataDir: URL) async throws(HopError) -> (pid: Int32, spawned: Bool) {
         let binary = try ClaudeDesktop.locateExecutable()
         if let pid = try runningPID(dataDir: dataDir, binary: binary) {
             return (pid, false)
         }
         do {
             try FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
-            let process = Process()
-            process.executableURL = binary
-            process.arguments = ["--user-data-dir=\(dataDir.path)"]
-            process.standardInput = FileHandle.nullDevice
-            process.standardOutput = FileHandle.nullDevice
-            process.standardError = FileHandle.nullDevice
-            try process.run()
-            return (process.processIdentifier, true)
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.createsNewApplicationInstance = true
+            configuration.arguments = ["--user-data-dir=\(dataDir.path)"]
+            let appURL = binary.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            let app = try await NSWorkspace.shared.openApplication(at: appURL, configuration: configuration)
+            return (app.processIdentifier, true)
         } catch {
             throw HopError.launchFailed(underlying: error)
         }
