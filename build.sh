@@ -19,7 +19,7 @@ rm -rf build/Hop.app
 mkdir -p build/Hop.app/Contents/MacOS build/Hop.app/Contents/Resources
 cp "$bin_dir/Hop" build/Hop.app/Contents/MacOS/Hop
 cp Resources/Info.plist build/Hop.app/Contents/Info.plist
-cp Resources/AppIcon.icns build/Hop.app/Contents/Resources/AppIcon.icns
+cp Resources/AppIcon.icns Resources/Assets.car build/Hop.app/Contents/Resources/
 
 echo "[4/$total] ad-hoc codesign"
 codesign -s - --force build/Hop.app
