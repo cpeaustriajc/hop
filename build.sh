@@ -33,6 +33,7 @@ echo "      $HOME/Applications/Hop.app"
 echo "[6/$total] registering with LaunchServices (does not change the claude handler)"
 lsregister=/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister
 "$lsregister" -f "$HOME/Applications/Hop.app"
+mdimport "$HOME/Applications/Hop.app"
 
 echo "[7/$total] done"
 echo "$PWD/build/Hop.app"
